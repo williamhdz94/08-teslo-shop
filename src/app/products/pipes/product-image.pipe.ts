@@ -8,14 +8,28 @@ export class ProductImagePipe implements PipeTransform {
 
   baseUrl = environment.baseUrl;
 
-  transform(value: string | string[]): string {
+  transform(value: null | string | string[]): string {
     const noImage = './assets/images/no-image.jpg';
 
-    if ( value.length > 1 ) {
-      return `${ this.baseUrl }/files/product/${value[0]}`
-    } else {
+    if ( value === null ) {
       return noImage;
     }
+
+    if( typeof value === 'string' && value.startsWith('blob:') ) {
+      return value;
+    }
+
+    if ( typeof value === 'string' ) {
+      return `${ this.baseUrl }/files/product/${ value }`;
+    }
+
+    const image = value.at(0);
+
+    if ( !image ) {
+     return noImage;
+    }
+
+    return `${ this.baseUrl }/files/product/${ image }}`
 
   }
 

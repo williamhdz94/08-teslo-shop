@@ -110,8 +110,24 @@
       </button>
     </div>
 
-    <product-carrousel [images]="product().images" />
+    <product-carrousel [images]="imagesToCarrousel()" />
 
-    <input type="file" class="file-input file-input-bordered w-full mt-4" />
+    <input type="file" accept="images/*"
+    multiple class="file-input file-input-bordered w-full mt-4"
+    (change)="onFilesChenaged($event)"
+    />
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      @for (image of tempImage(); track image) {
+        <img [src]="image" alt="Temporal" class="w-full object-cover rouded-xl mt-3"/>
+      }
+    </div>
+
   </div>
 </form>
+
+@if ( wasSaved() ) {
+  <div class="alert alert-success fixed bottom-4 right-4 w-80 animate-fadeIn">
+  <span>Datos actualizados correctamente</span>
+</div>
+}

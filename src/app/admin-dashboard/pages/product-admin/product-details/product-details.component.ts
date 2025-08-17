@@ -1,10 +1,12 @@
-import { Component, inject, input, OnInit } from '@angular/core';
+import { Component, inject, input, OnInit, signal, computed } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProductCarrouselComponent } from '@products/components/product-carrousel/product-carrousel.component';
 import { Product } from '@products/interfaces/IProducts';
 import { FormUtils } from '@shared/utils/form-utils';
 import { LabelFormErrorComponent } from "@shared/components/label-form-error/label-form-error.component";
 import { ProductsService } from '@products/services/products.service';
+import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'product-details',
@@ -21,6 +23,7 @@ export class ProductDetailsComponent implements OnInit {
 
   fb = inject(FormBuilder);
   productService = inject(ProductsService);
+  router = inject(Router);
 
   productForm = this.fb.group({
     title: ['', Validators.required],
@@ -35,6 +38,14 @@ export class ProductDetailsComponent implements OnInit {
   })
 
   sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+  wasSaved = signal(false);
+  tempImage = signal<string[]>([]);
+  imageFileList: FileList | undefined = undefined;
+  imagesToCarrousel = computed(() => {
+    const currentProductImages = [...this.product().images, ...this.tempImage()];
+
+    return currentProductImages;
+  })
 
   ngOnInit(): void {
     this.setFormValue(this.product());
@@ -57,7 +68,7 @@ export class ProductDetailsComponent implements OnInit {
     this.productForm.patchValue({ sizes: currentSizes })
   }
 
-  onSubmit() {
+  async onSubmit() {
     const isValid = this.productForm.valid;
 
     this.productForm.markAllAsTouched();
@@ -71,11 +82,37 @@ export class ProductDetailsComponent implements OnInit {
       tags: formValue.tags?.toLowerCase().split(',').map((tag) => tag.trim()) ?? []
     };
 
-    this.productService.updateProduct(this.product().id, productLike).subscribe(
-      product => {
-        console.log('producto actualizado', product)
-      }
+    if( this.product().id === 'new' ) {
+      const product = await firstValueFrom(
+        this.productService.createProduct(productLike)
+      );
+
+      this.router.navigate(['/admin/products', product.id]);
+
+    } else {
+      await firstValueFrom(
+        this.productService.updateProduct(this.product().id, productLike)
+      );
+
+    }
+
+    this.wasSaved.set(true);
+    setTimeout(() => {
+      this.wasSaved.set(false);
+    }, 3000);
+
+  }
+
+  onFilesChenaged( event: Event ) {
+    const fileList = ( event.target as HTMLInputElement).files
+    this.imageFileList = fileList ?? undefined;
+
+    const imageUrls = Array.from(fileList ?? []).map((file) =>
+      URL.createObjectURL(file)
     );
+
+    this.tempImage.set(imageUrls);
+
   }
 
 }

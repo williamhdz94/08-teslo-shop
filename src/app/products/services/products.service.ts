@@ -1,19 +1,34 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { IProductsResponse, Product } from '@products/interfaces/IProducts';
+import { User } from '@auth/interfaces/IUser';
+import { Gender, IProductsResponse, Product } from '@products/interfaces/IProducts';
 import { IOptions } from '@shared/interfaces/IOptionsParams';
 import { Observable, of, tap } from 'rxjs';
 import { environment } from 'src/environments/environment';
 
+const emptyProduct: Product = {
+  id: 'new',
+  title: '',
+  price: 0,
+  description: '',
+  slug: '',
+  stock: 0,
+  sizes: [],
+  gender: Gender.Kid,
+  tags: [],
+  images: [],
+  user: {} as User
+}
+
 @Injectable({providedIn: 'root'})
 export class ProductsService {
 
-  private http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   baseUrl: string = environment.baseUrl;
 
-  private productsCache = new Map<string, IProductsResponse>();
-  private productCache = new Map<string, Product>();
+  private readonly productsCache = new Map<string, IProductsResponse>();
+  private readonly productCache = new Map<string, Product>();
 
   getProducts(options: IOptions): Observable<IProductsResponse> {
 
@@ -51,6 +66,9 @@ export class ProductsService {
 
   getProductById(id: string): Observable<Product> {
     const key = id;
+    if ( key === 'new' ) {
+      return of(emptyProduct);
+    }
 
     if( this.productCache.has(key) ) {
       return of(this.productCache.get(key)!)
@@ -63,6 +81,12 @@ export class ProductsService {
 
   updateProduct( id: string, productLike: Partial<Product> ): Observable<Product> {
     return this.http.patch<Product>(`${ this.baseUrl }/products/${ id }`, productLike).pipe(
+      tap((product) => this.updateCacheProduct(product))
+    )
+  }
+
+  createProduct(productLike: Partial<Product>): Observable<Product> {
+    return this.http.post<Product>(`${ this.baseUrl }/products`, productLike).pipe(
       tap((product) => this.updateCacheProduct(product))
     )
   }
